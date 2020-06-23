@@ -36,3 +36,7 @@ Global / cancelable := true
 
 // exclude Scala library from assembly
 assembly / assemblyOption  := (assembly / assemblyOption).value.copy(includeScala = false)
+
+libraryDependencies ++= Seq(
+  "redis.clients" % "jedis" % "3.2.0"
+)
