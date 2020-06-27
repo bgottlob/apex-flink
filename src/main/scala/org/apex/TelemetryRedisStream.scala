@@ -25,7 +25,12 @@ object TelemetryRedisStream {
       .addSource(new RedisStreamSource(host, port, "MYSTREAM"))
       .name("telemetry-events")
 
-    stream print
+    val alerts: DataStream[Int] = stream
+      .keyBy(entry => "gearchange")
+      .process(new TelemetryAggregator)
+      .name("telemetry-aggregator")
+
+    alerts print
 
     env.execute("Telemetry Redis Stream")
   }
