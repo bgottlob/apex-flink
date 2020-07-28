@@ -22,7 +22,7 @@ lazy val root = (project in file(".")).
     libraryDependencies ++= flinkDependencies
   )
 
-assembly / mainClass := Some("org.apex.Job")
+assembly / mainClass := Some("org.apex.TelemetryRedisStream")
 
 // make run command include the provided dependencies
 Compile / run  := Defaults.runTask(Compile / fullClasspath,
