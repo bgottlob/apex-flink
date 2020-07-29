@@ -1,6 +1,8 @@
 package org.apex
 
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
+import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.Types
 import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.scala._
@@ -9,6 +11,7 @@ import org.apache.flink.streaming.api.windowing.windows.{GlobalWindow, Window}
 import org.apache.flink.streaming.api.windowing.triggers.{Trigger, TriggerResult}
 import org.apache.flink.streaming.api.windowing.triggers.Trigger.TriggerContext
 import redis.clients.jedis.{Jedis, StreamEntry}
+import java.util.concurrent.TimeUnit
 import scala.util.parsing.json._
 
 class LapEvent(sessionIdc: Long, carIndexc: Int, currentLapc: Int, lastLapTimec: Float) {
@@ -67,6 +70,11 @@ object TelemetryRedisStream {
     val port = 6379
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(
+      6, // number of restart attempts
+      Time.of(3, TimeUnit.SECONDS) // delay
+    ))
+
     val stream: DataStream[StreamEntry] = env
       .addSource(new RedisStreamSource(host, port, "telemetry"))
       .name("telemetry-events")
