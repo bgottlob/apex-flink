@@ -56,18 +56,8 @@ class LapChangeTrigger[W <: Window] extends Trigger[LapEvent, W] {
 object TelemetryRedisStream {
 
   def main(args: Array[String]): Unit = {
-    /*
-    if (args.length != 2) {
-      System.err.println("USAGE:\TelemetryRedisStream <hostname> <port>")
-      return
-    }
-
-    val host = args(0)
-    val port = args(1).toInt
-    */
-
-    val host = "localhost"
-    val port = 6379
+    val host: String = sys.env("APEX_REDIS_HOST")
+    val port: Int = sys.env("APEX_REDIS_PORT").toInt
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(
@@ -78,13 +68,6 @@ object TelemetryRedisStream {
     val stream: DataStream[StreamEntry] = env
       .addSource(new RedisStreamSource(host, port, "telemetry"))
       .name("telemetry-events")
-
-    /*
-    val alerts: DataStream[Int] = stream
-      .keyBy(entry => "gearchange")
-      .process(new TelemetryAggregator)
-      .name("telemetry-aggregator")
-    */
 
     val pace: DataStream[Float] = stream
       .filter(entry => entry.getFields.get("type") == "F1.LapDataPacket")
