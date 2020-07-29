@@ -78,7 +78,7 @@ object TelemetryRedisStream {
       .name("telemetry-aggregator")
     */
 
-    val alerts: DataStream[Float] = stream
+    val pace: DataStream[Float] = stream
       .filter(entry => entry.getFields.get("type") == "F1.LapDataPacket")
       .map(entry => {
         val json = JSON.parseFull(entry.getFields.get("data")).get.asInstanceOf[Map[String, Any]]
@@ -99,7 +99,7 @@ object TelemetryRedisStream {
       .process(new LapPaceTracker)
       .name("lap-pace-tracker")
 
-    alerts print
+   pace.addSink(new RedisStreamSink[Float](host, port, "pace")).name("pace-sink")
     
 
     env.execute("Telemetry Redis Stream")
