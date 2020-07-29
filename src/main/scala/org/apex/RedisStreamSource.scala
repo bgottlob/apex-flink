@@ -34,7 +34,15 @@ class RedisStreamSource(host: String, port: Int, stream: String) extends RichSou
 
   override def cancel(): Unit = {
     running = false
-    jedis.close()
+    try {
+      jedis.close()
+    }
+  }
+
+  override def close(): Unit = {
+    try {
+      jedis.close()
+    }
   }
 }
 
@@ -46,7 +54,9 @@ class RedisStreamSink[A](host: String, port: Int, stream: String) extends RichSi
   }
 
   override def close(): Unit = {
-    jedis.close()
+    try {
+      jedis.close()
+    }
   }
 
   override def invoke(value: A) = {
