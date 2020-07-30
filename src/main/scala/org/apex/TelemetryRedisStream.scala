@@ -58,6 +58,7 @@ object TelemetryRedisStream {
   def main(args: Array[String]): Unit = {
     val host: String = sys.env("APEX_REDIS_HOST")
     val port: Int = sys.env("APEX_REDIS_PORT").toInt
+    val password: String = sys.env("APEX_REDIS_PASSWORD")
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(
@@ -66,7 +67,7 @@ object TelemetryRedisStream {
     ))
 
     val stream: DataStream[StreamEntry] = env
-      .addSource(new RedisStreamSource(host, port, "telemetry"))
+      .addSource(new RedisStreamSource(host, port, password, "telemetry"))
       .name("telemetry-events")
 
     val pace: DataStream[Float] = stream
@@ -90,7 +91,7 @@ object TelemetryRedisStream {
       .process(new LapPaceTracker)
       .name("lap-pace-tracker")
 
-   pace.addSink(new RedisStreamSink[Float](host, port, "pace")).name("pace-sink")
+   pace.addSink(new RedisStreamSink[Float](host, port, password, "pace")).name("pace-sink")
     
 
     env.execute("Telemetry Redis Stream")
