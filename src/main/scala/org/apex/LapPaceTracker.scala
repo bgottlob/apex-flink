@@ -13,7 +13,6 @@ class LapPaceTracker extends ProcessWindowFunction[LapEvent, Float, String, Glob
   @transient private final val historySize = 3
 
   private def addLapTime(history: List[Float], time: Float): List[Float] = {
-    println(historySize)
     if (history.isEmpty) {
       return List(time)
     } else {
@@ -26,11 +25,13 @@ class LapPaceTracker extends ProcessWindowFunction[LapEvent, Float, String, Glob
     println(s"Evaluating for last lap time: ${event}")
 
     val lapHistory = context.globalState.getListState(new ListStateDescriptor("lapHistory", TypeInformation.of(new TypeHint[Float]() {})))
-    val history = addLapTime(lapHistory.get.asScala.toList.asInstanceOf[List[Float]], event.lastLapTime)
-    println(history)
-    println(historySize)
+    // When currentLap == 0, lastLapTime == 0.0
+    if (event.currentLap > 1) {
+      val history = addLapTime(lapHistory.get.asScala.toList.asInstanceOf[List[Float]], event.lastLapTime)
+      println(history)
 
-    lapHistory.update(history.asJava)
-    out.collect(history.sum / history.length)
+      lapHistory.update(history.asJava)
+      out.collect(history.sum / history.length)
+    }
   }
 }

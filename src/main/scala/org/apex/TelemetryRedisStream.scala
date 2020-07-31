@@ -85,13 +85,13 @@ object TelemetryRedisStream {
           lapData.asInstanceOf[Map[String, Any]].get("last_lap_time").get.asInstanceOf[Double].toFloat
         )
       })
-      .keyBy(event => s"${event.sessionId}-${event.carIndex}") // TODO key by session ID
+      .keyBy(event => s"${event.sessionId}-${event.carIndex}")
       .window(GlobalWindows.create())
       .trigger(new LapChangeTrigger[GlobalWindow])
       .process(new LapPaceTracker)
       .name("lap-pace-tracker")
 
-   pace.addSink(new RedisStreamSink[Float](host, port, password, "pace")).name("pace-sink")
+    pace.addSink(new RedisStreamSink[Float](host, port, password, "pace")).name("pace-sink")
     
 
     env.execute("Telemetry Redis Stream")
