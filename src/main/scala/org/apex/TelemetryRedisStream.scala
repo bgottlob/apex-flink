@@ -77,7 +77,7 @@ object TelemetryRedisStream {
   def main(args: Array[String]): Unit = {
     val host: String = sys.env("APEX_REDIS_HOST")
     val port: Int = sys.env("APEX_REDIS_PORT").toInt
-    val password: String = sys.env("APEX_REDIS_PASSWORD")
+    val password: Option[String] = sys.env.get("APEX_REDIS_PASSWORD")
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(

@@ -8,14 +8,14 @@ import redis.clients.jedis.{Jedis, StreamEntry, StreamEntryID}
 import java.util.AbstractMap.SimpleImmutableEntry
 import scala.collection.JavaConverters._
 
-class RedisStreamSource(host: String, port: Int, password: String, stream: String) extends RichSourceFunction[StreamEntry] {
+class RedisStreamSource(host: String, port: Int, password: Option[String], stream: String) extends RichSourceFunction[StreamEntry] {
   private var running = true // Flag indicating whether streaming continues
   private var jedis: Jedis = _ // Redis connection
   private var checkpointID: StreamEntryID = null // ID of last stream entry collected
 
   override def open(params: Configuration): Unit = {
     jedis = new Jedis(host, port)
-    jedis.auth(password)
+    if (!password.isEmpty) jedis.auth(password.get)
   }
 
   override def run(ctx: SourceFunction.SourceContext[StreamEntry]): Unit = {
@@ -47,12 +47,12 @@ class RedisStreamSource(host: String, port: Int, password: String, stream: Strin
   }
 }
 
-class RedisStreamSink[A <: Mappable](host: String, port: Int, password: String, stream: String) extends RichSinkFunction[A] {
+class RedisStreamSink[A <: Mappable](host: String, port: Int, password: Option[String], stream: String) extends RichSinkFunction[A] {
   private var jedis: Jedis = _ // Redis connection
 
   override def open(params: Configuration): Unit = {
     jedis = new Jedis(host, port)
-    jedis.auth(password)
+    if (!password.isEmpty) jedis.auth(password.get)
   }
 
   override def close(): Unit = {
