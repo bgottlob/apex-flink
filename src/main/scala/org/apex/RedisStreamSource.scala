@@ -47,7 +47,7 @@ class RedisStreamSource(host: String, port: Int, password: String, stream: Strin
   }
 }
 
-class RedisStreamSink[A](host: String, port: Int, password: String, stream: String) extends RichSinkFunction[A] {
+class RedisStreamSink[A <: Mappable](host: String, port: Int, password: String, stream: String) extends RichSinkFunction[A] {
   private var jedis: Jedis = _ // Redis connection
 
   override def open(params: Configuration): Unit = {
@@ -61,8 +61,8 @@ class RedisStreamSink[A](host: String, port: Int, password: String, stream: Stri
     }
   }
 
-  override def invoke(value: A) = {
-    jedis.xadd(stream, null, Map("value" -> value.toString()).asJava)
-    println(s"Added value `${value}` to stream ${stream}")
+  override def invoke(map: A) = {
+    jedis.xadd(stream, null, map.toMap().asJava)
+    println(s"Added value `${map}` to stream ${stream}")
   }
 }

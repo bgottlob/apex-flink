@@ -25,6 +25,25 @@ class LapEvent(sessionIdc: Long, carIndexc: Int, currentLapc: Int, lastLapTimec:
   }
 }
 
+trait Mappable {
+  def toMap(): Map[String,String]
+}
+
+class PaceEvent(lapEventc: LapEvent, pacec: Float) extends Mappable {
+  val lapEvent: LapEvent = lapEventc
+  val pace: Float = pacec
+
+  // Render as a map for redis streams
+  def toMap(): Map[String,String] = {
+    Map(
+      "session_id" -> lapEvent.sessionId.toString,
+      "car_index"  -> lapEvent.carIndex.toString,
+      "lap"        -> (lapEvent.currentLap - 1).toString,
+      "pace"       -> pace.toString
+    )
+  }
+}
+
 class LapChangeTrigger[W <: Window] extends Trigger[LapEvent, W] {
   override def onElement(element: LapEvent, timestamp: Long, window: W, ctx: TriggerContext): TriggerResult = {
     val currentLap = ctx.getPartitionedState(new ValueStateDescriptor("currentLap", Types.INT))
@@ -66,24 +85,20 @@ object TelemetryRedisStream {
       Time.of(3, TimeUnit.SECONDS) // delay
     ))
 
-    val stream: DataStream[StreamEntry] = env
-      .addSource(new RedisStreamSource(host, port, password, "telemetry"))
-      .name("telemetry-events")
+    val lapStream: DataStream[StreamEntry] = env
+      .addSource(new RedisStreamSource(host, port, password, "laps"))
+      .name("lap-events")
 
-    val pace: DataStream[Float] = stream
-      .filter(entry => entry.getFields.get("type") == "F1.LapDataPacket")
+    val pace: DataStream[PaceEvent] = lapStream
+      //.filter(entry => entry.getFields.get("type") == "F1.LapDataPacket")
       .map(entry => {
-        val json = JSON.parseFull(entry.getFields.get("data")).get.asInstanceOf[Map[String, Any]]
-        val sessionId: Long = json.get("header").get.asInstanceOf[Map[String, Any]].get("session_uid").get.asInstanceOf[Double].toLong
-        val playerCarIndex = json.get("header").get.asInstanceOf[Map[String, Any]].get("player_car_index").get.asInstanceOf[Double].toInt
-        val lapData = json.get("lap_data").get.asInstanceOf[List[Any]](if (playerCarIndex > 20) 0 else playerCarIndex)
+        val fields = entry.getFields
+        val sessionId: Long = fields.get("session_uid").toLong
+        val carIndex: Int = fields.get("car_index").toInt
+        val currentLapNum: Int = fields.get("current_lap_num").toInt
+        val lastLapTime: Float = fields.get("last_lap_time").toFloat
 
-        new LapEvent(
-          sessionId,
-          playerCarIndex,
-          lapData.asInstanceOf[Map[String, Any]].get("current_lap_num").get.asInstanceOf[Double].toInt,
-          lapData.asInstanceOf[Map[String, Any]].get("last_lap_time").get.asInstanceOf[Double].toFloat
-        )
+        new LapEvent(sessionId, carIndex, currentLapNum, lastLapTime)
       })
       .keyBy(event => s"${event.sessionId}-${event.carIndex}")
       .window(GlobalWindows.create())
@@ -91,7 +106,7 @@ object TelemetryRedisStream {
       .process(new LapPaceTracker)
       .name("lap-pace-tracker")
 
-    pace.addSink(new RedisStreamSink[Float](host, port, password, "pace")).name("pace-sink")
+    pace.addSink(new RedisStreamSink[PaceEvent](host, port, password, "pace")).name("pace-sink")
     
 
     env.execute("Telemetry Redis Stream")

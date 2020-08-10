@@ -9,7 +9,7 @@ import org.apache.flink.util.Collector
 import scala.collection.JavaConverters._
 
 @SerialVersionUID(1L)
-class LapPaceTracker extends ProcessWindowFunction[LapEvent, Float, String, GlobalWindow] {
+class LapPaceTracker extends ProcessWindowFunction[LapEvent, PaceEvent, String, GlobalWindow] {
   @transient private final val historySize = 3
 
   private def addLapTime(history: List[Float], time: Float): List[Float] = {
@@ -20,18 +20,18 @@ class LapPaceTracker extends ProcessWindowFunction[LapEvent, Float, String, Glob
     }
   }
 
-  override def process(key: String, context: Context, input: Iterable[LapEvent], out: Collector[Float]): Unit = {
-    val event = input.last
+  override def process(key: String, context: Context, input: Iterable[LapEvent], out: Collector[PaceEvent]): Unit = {
+    val event: LapEvent = input.last
     println(s"Evaluating for last lap time: ${event}")
 
     val lapHistory = context.globalState.getListState(new ListStateDescriptor("lapHistory", TypeInformation.of(new TypeHint[Float]() {})))
     // When currentLap == 0, lastLapTime == 0.0
     if (event.currentLap > 1) {
       val history = addLapTime(lapHistory.get.asScala.toList.asInstanceOf[List[Float]], event.lastLapTime)
-      println(history)
 
       lapHistory.update(history.asJava)
-      out.collect(history.sum / history.length)
+      val pace: Float = history.sum / history.length
+      out.collect(new PaceEvent(event, pace))
     }
   }
 }
