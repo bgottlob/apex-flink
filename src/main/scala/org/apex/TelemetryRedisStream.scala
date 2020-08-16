@@ -36,7 +36,7 @@ class PaceEvent(lapEventc: LapEvent, pacec: Float) extends Mappable {
   // Render as a map for redis streams
   def toMap(): Map[String,String] = {
     Map(
-      "session_id" -> lapEvent.sessionId.toString,
+      "session_uid" -> lapEvent.sessionId.toString,
       "car_index"  -> lapEvent.carIndex.toString,
       "lap"        -> (lapEvent.currentLap - 1).toString,
       "pace"       -> pace.toString
